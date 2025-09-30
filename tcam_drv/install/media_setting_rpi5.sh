@@ -99,17 +99,21 @@ probe_camera_entity()
     local entity_id="$2"
 	local media_dev
 
-    echo "Find $entity_name $entity_id"
+    echo "Find camera entry: $entity_name $entity_id"
 
     for media_dev in /dev/media*; do
-        echo "Checking $media_dev..."
+        # echo "Checking $media_dev..."
         entity_info=$(media-ctl -d $media_dev -p 2>/dev/null | grep "$entity_name $entity_id-0054")
         if [ -n "$entity_info" ]; then
 			g_media_device=$media_dev
 			echo "Found $entity_name $entity_id entity in $g_media_device"
+            echo ""
 			return 1
         fi
     done
+
+    echo "Not found camera entry: $entity_name $entity_id"
+
 	return 0
 }
 
@@ -120,26 +124,26 @@ setup_camera_entity()
     local width="$5"
     local height="$6"
 
-	echo "$g_media_device $g_video_device"
+	# echo "$g_media_device $g_video_device"
+    echo ""
     echo "Setup camera entity: $1 $2-0054 with format:$media_fmt, width:$width, height:$height pixel_fmt:$pixel_fmt"
 
+    #reset media setting
 	media-ctl -d $g_media_device -r
-	#enable "rp1-cfe-csi2_ch0":0 [ENABLED]-->/dev/video0
-	media-ctl -d $g_media_device -l ''\''csi2'\'':4 -> '\''rp1-cfe-csi2_ch0'\'':0 [1]' -v
-    #v4l2-ctl --set-ctrl roi_x=$g_roi_x -d $g_video_subdevice
-    #v4l2-ctl --set-ctrl roi_y=$g_roi_y -d $g_video_subdevice
-	#set media's setting
-    media-ctl -d "$g_media_device" --set-v4l2 "'$1 $2-0054':0[fmt:${media_fmt}/${width}x${height} field:none]" -v
-    #media-ctl -d $g_media_device -V ''\''csi2'\'':0 [fmt:UYVY8_1X16/1920x1080 field:none]'
-	media-ctl -d "$g_media_device" -V "'csi2':0 [fmt:${media_fmt}/${width}x${height} field:none]" -v
-    #media-ctl -d $g_media_device -V ''\''csi2'\'':4 [fmt:UYVY8_1X16/1920x1080 field:none]'
-	media-ctl -d "$g_media_device" -V "'csi2':4 [fmt:${media_fmt}/${width}x${height} field:none]" -v
+	
+    #enable "rp1-cfe-csi2_ch0":0 [ENABLED]-->/dev/video0
+	media-ctl -d $g_media_device -l ''\''csi2'\'':4 -> '\''rp1-cfe-csi2_ch0'\'':0 [1]'
+    
+    #set media's setting
+    media-ctl -d "$g_media_device" --set-v4l2 "'$1 $2-0054':0[fmt:${media_fmt}/${width}x${height} field:none]"
+    media-ctl -d "$g_media_device" -V "'csi2':0 [fmt:${media_fmt}/${width}x${height} field:none]"
+    media-ctl -d "$g_media_device" -V "'csi2':4 [fmt:${media_fmt}/${width}x${height} field:none]"
     #set video node
-	# v4l2-ctl -d $g_video_device --set-fmt-video=width=$width,height=$height,pixelformat=$pixel_fmt,colorspace=rec709,ycbcr=rec709,xfer=rec709,quantization=full-range
-    v4l2-ctl -d $g_video_device --set-fmt-video=width=$width,height=$height,pixelformat=$pixel_fmt,colorspace=rec709,ycbcr=rec709,xfer=rec709,quantization=full-range
+	v4l2-ctl -d $g_video_device --set-fmt-video=width=$width,height=$height,pixelformat=$pixel_fmt,colorspace=rec709,ycbcr=rec709,xfer=rec709,quantization=full-range
 }
 
-
+echo ""
+echo "================ Thermal Camera Module Setting ================"
 check_rpi_board;
 check_kernel_version;
 check_i2c_bus;
@@ -168,14 +172,20 @@ if [ "$g_tcam_vdo_drv" == "tvdo" ]; then
     probe_camera_entity $g_tcam_vdo_drv $I2CBUS_CAM1
 
     if [ $? -eq 1 ]; then
- 		echo "CAM1 probed: media device is $g_media_device"
+ 		echo "tvdo probed: media device is $g_media_device"
 
  		g_video_device=$(media-ctl -e rp1-cfe-csi2_ch0 -d $g_media_device)
  		g_video_subdevice=$(media-ctl -e "$g_tcam_vdo_drv $I2CBUS_CAM1-0054" -d $g_media_device)
+
+        echo "video device is $g_video_device"
+        echo "video subdevice is $g_video_subdevice"
  		
         setup_camera_entity $g_tcam_vdo_drv $I2CBUS_CAM1 $TCAMVDO_MEDIA_FMT $TCAMVDO_PIXEL_FMT $TCAMVDO_WIDTH $TCAMVDO_HEIGHT
  		
-        echo "set CAM1 finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
+        echo "Set tvdo finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
+
+        export TCAMVDO_DEVICE="$g_video_device"
+        export TCAMVDO_SUBDEV="$g_video_subdevice"
  	else 
  		echo "NOT FOUND $g_tcam_vdo_drv $I2CBUS_CAM1"
  	fi
@@ -186,16 +196,50 @@ if [ "$g_tcam_raw_drv" == "traw" ]; then
     probe_camera_entity $g_tcam_raw_drv $I2CBUS_CAM0
 
     if [ $? -eq 1 ]; then
- 		echo "CAM0 probed: media device is $g_media_device"
+ 		echo "traw probed: media device is $g_media_device"
  		
         g_video_device=$(media-ctl -e rp1-cfe-csi2_ch0 -d $g_media_device)
- 		g_video_subdevice=$(media-ctl -e "$g_tcam_raw_drv $I2CBUS_CAM0-0054" -d $g_media_device)	
+ 		g_video_subdevice=$(media-ctl -e "$g_tcam_raw_drv $I2CBUS_CAM0-0054" -d $g_media_device)
+
+        echo "video device is $g_video_device"
+        echo "video subdevice is $g_video_subdevice"	
  		
         setup_camera_entity $g_tcam_raw_drv $I2CBUS_CAM0 $TCAMRAW_MEDIA_FMT $TCAMRAW_PIXEL_FMT $TCAMRAW_WIDTH $TCAMRAW_HEIGHT 
  		
-        echo "set CAM0 finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
+        echo "Set traw finish, plese get frame from $g_video_device and use $g_video_subdevice for camera setting"
+
+        export TCAMRAW_DEVICE="$g_video_device"
+        export TCAMRAW_SUBDEV="$g_video_subdevice"
  	else 
  		echo "NOT FOUND $g_tcam_raw_drv $I2CBUS_CAM0"
  	fi
 fi
 echo ""
+
+
+echo $TCAMVDO_DEVICE
+echo $TCAMVDO_SUBDEV
+
+echo $TCAMRAW_DEVICE
+echo $TCAMRAW_SUBDEV
+
+sudo sed "/^TCAMVDO_DEVICE/d" -i ~/.bashrc
+sudo sed "/^TCAMVDO_SUBDEV/d" -i ~/.bashrc
+
+sudo sed "/^TCAMRAW_DEVICE/d" -i ~/.bashrc
+sudo sed "/^TCAMRAW_SUBDEV/d" -i ~/.bashrc
+
+echo "export TCAMVDO_DEVICE=$TCAMVDO_DEVICE" >> ~/.bashrc
+echo "export TCAMVDO_SUBDEV=$TCAMVDO_SUBDEV" >> ~/.bashrc
+echo "export TCAMRAW_DEVICE=$TCAMRAW_DEVICE" >> ~/.bashrc
+echo "export TCAMRAW_SUBDEV=$TCAMRAW_SUBDEV" >> ~/.bashrc
+
+# echo "TCAMVDO_DEVICE=" >> ~/.bashrc
+# echo "TCAMVDO_SUBDEV=" >> ~/.bashrc
+# echo "TCAMRAW_DEVICE=" >> ~/.bashrc
+# echo "TCAMRAW_SUBDEV=" >> ~/.bashrc
+
+source ~/.bashrc
+
+
+echo "================ Thermal Camera Module Setting Finish ================"
