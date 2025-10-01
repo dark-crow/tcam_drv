@@ -1286,12 +1286,8 @@ static int thermal_probe(struct i2c_client *client)
 
 		if ( 300 <= wait_cnt ) {
 			dev_err(dev, "thermal:Can`t received ready signal!\n");
-			//g_f_fpga_det = 0;
-
-			g_tvdo_id = TVDO_MODE_QVGA_384_288;
-
-			g_res_w = 384;
-			g_res_h = 288;
+			
+			return -EINVAL;
 		}
 		else {
 			u16			img_w, img_h;
