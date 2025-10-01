@@ -168,6 +168,8 @@ else
     exit 0
 fi
 
+export TCAMVDO_DEVICE=""
+export TCAMVDO_SUBDEV=""
 if [ "$g_tcam_vdo_drv" == "tvdo" ]; then
     probe_camera_entity $g_tcam_vdo_drv $I2CBUS_CAM1
 
@@ -192,6 +194,8 @@ if [ "$g_tcam_vdo_drv" == "tvdo" ]; then
 fi
 echo ""
 
+export TCAMRAW_DEVICE=""
+export TCAMRAW_SUBDEV=""
 if [ "$g_tcam_raw_drv" == "traw" ]; then
     probe_camera_entity $g_tcam_raw_drv $I2CBUS_CAM0
 
@@ -223,16 +227,16 @@ echo $TCAMVDO_SUBDEV
 echo $TCAMRAW_DEVICE
 echo $TCAMRAW_SUBDEV
 
-sudo sed "/^TCAMVDO_DEVICE/d" -i ~/.bashrc
-sudo sed "/^TCAMVDO_SUBDEV/d" -i ~/.bashrc
+sudo sed "/^export TCAMVDO_DEVICE/d" -i ~/.bashrc
+sudo sed "/^export TCAMVDO_SUBDEV/d" -i ~/.bashrc
 
-sudo sed "/^TCAMRAW_DEVICE/d" -i ~/.bashrc
-sudo sed "/^TCAMRAW_SUBDEV/d" -i ~/.bashrc
+sudo sed "/^export TCAMRAW_DEVICE/d" -i ~/.bashrc
+sudo sed "/^export TCAMRAW_SUBDEV/d" -i ~/.bashrc
 
-echo "export TCAMVDO_DEVICE=$TCAMVDO_DEVICE" >> ~/.bashrc
-echo "export TCAMVDO_SUBDEV=$TCAMVDO_SUBDEV" >> ~/.bashrc
-echo "export TCAMRAW_DEVICE=$TCAMRAW_DEVICE" >> ~/.bashrc
-echo "export TCAMRAW_SUBDEV=$TCAMRAW_SUBDEV" >> ~/.bashrc
+sudo echo "export TCAMVDO_DEVICE=$TCAMVDO_DEVICE" >> ~/.bashrc
+sudo echo "export TCAMVDO_SUBDEV=$TCAMVDO_SUBDEV" >> ~/.bashrc
+sudo echo "export TCAMRAW_DEVICE=$TCAMRAW_DEVICE" >> ~/.bashrc
+sudo echo "export TCAMRAW_SUBDEV=$TCAMRAW_SUBDEV" >> ~/.bashrc
 
 # echo "TCAMVDO_DEVICE=" >> ~/.bashrc
 # echo "TCAMVDO_SUBDEV=" >> ~/.bashrc
